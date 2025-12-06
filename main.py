@@ -278,26 +278,29 @@ async def randomusercount(ctx, *, args: str = None):
     title_raw = " ".join(parts[:-3])
     title = title_raw.replace("-", " ")
 
-    # Generate timestamp for Discord <t:...:R>
+    # Discord timestamp
     timestamp = int(target_time.timestamp())
-
     countdown_msg = await ctx.send(
         f"@everyone\n\n**{title}**\n\nCountdown: <t:{timestamp}:R>\n\n."
     )
 
-    # Wait until target time or until message is deleted
     while True:
         now = datetime.utcnow()
-        if now >= target_time:
+        remaining = (target_time - now).total_seconds()
+        if remaining <= 0:
             break
 
-        # Check if message still exists
+        # ตรวจสอบข้อความยังอยู่
         try:
-            await countdown_msg.fetch()  # Raises if deleted
+            await countdown_msg.fetch()
         except discord.NotFound:
-            return  # Stop countdown if message is deleted
+            return  # stop if message deleted
 
-        await asyncio.sleep(5)  # Sleep some seconds instead of every second
+        # เปลี่ยน sleep ตามเวลาที่เหลือ
+        if remaining <= 10:
+            await asyncio.sleep(1)
+        else:
+            await asyncio.sleep(5)
 
     role = discord.utils.get(ctx.guild.roles, name="Registered")
     if not role:
@@ -310,7 +313,7 @@ async def randomusercount(ctx, *, args: str = None):
 
     eligible_members = [m for m in ctx.guild.members if role in m.roles and str(m.id) in data]
 
-    await countdown_msg.delete()  # Delete countdown message
+    await countdown_msg.delete()  # Delete countdown
 
     if not eligible_members:
         return  # Do nothing if no eligible users
@@ -326,6 +329,7 @@ async def randomusercount(ctx, *, args: str = None):
 
     await ctx.send(msg)
     log_winners(winners, title, data)
+
 
 
 
@@ -451,6 +455,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
