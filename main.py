@@ -244,13 +244,14 @@ async def randomuser(ctx, *, args: str = None):
 # ------------------------------
 # randomusercount (owner only) - ใช้ Discord Timestamp
 # ------------------------------
+# สร้าง dictionary เก็บ countdown message และ task
+active_countdowns = {}  # key = message.id, value = asyncio.Task
+
 @bot.command()
 async def randomusercount(ctx, *, args: str = None):
-    # Owner only
     if ctx.author.id != ctx.guild.owner_id:
         return
 
-    # Delete command message
     try:
         await ctx.message.delete()
     except:
@@ -277,51 +278,63 @@ async def randomusercount(ctx, *, args: str = None):
     title_raw = " ".join(parts[:-3])
     title = title_raw.replace("-", " ")
 
-    # แปลง target_time เป็น UNIX timestamp (UTC)
     unix_ts = int(target_time.timestamp())
 
-    # ส่ง countdown message แบบ timestamp
     countdown_msg = await ctx.send(
-        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n."
+        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n\n."
     )
 
-    # รอจนถึงเวลาที่กำหนด
-    now = datetime.utcnow()
-    remaining_seconds = (target_time - now).total_seconds()
-    if remaining_seconds > 0:
-        await asyncio.sleep(remaining_seconds)
+    # สร้าง task สำหรับรอเวลาสุ่ม
+    async def countdown_task():
+        now = datetime.utcnow()
+        remaining_seconds = (target_time - now).total_seconds()
+        if remaining_seconds > 0:
+            try:
+                await asyncio.sleep(remaining_seconds)
+            except asyncio.CancelledError:
+                # Task ถูกยกเลิกเพราะข้อความถูกลบ
+                return
 
-    # หลังจากถึงเวลาที่กำหนด ลบข้อความ countdown
-    try:
+        # ตรวจสอบ role
+        role = discord.utils.get(ctx.guild.roles, name="Registered")
+        if not role:
+            return
+
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+
+        eligible_members = [m for m in ctx.guild.members if role in m.roles and str(m.id) in data]
+        if not eligible_members:
+            return
+
+        amount_to_pick = min(amount, len(eligible_members))
+        winners = random.sample(eligible_members, amount_to_pick)
+
+        # ส่งผลผู้ชนะ
+        result_msg = f"**{title}**\n\nRandomly selected users 🎉\n\n"
+        for w in winners:
+            result_msg += f"{w.mention}\n\n"
+        result_msg += "."
+
         await countdown_msg.delete()
-    except:
-        pass
+        await ctx.send(result_msg)
+        log_winners(winners, title, data)
 
-    # ตรวจสอบ role และผู้ที่มีสิทธิ์
-    role = discord.utils.get(ctx.guild.roles, name="Registered")
-    if not role:
-        return
+    task = asyncio.create_task(countdown_task())
+    active_countdowns[countdown_msg.id] = task
 
-    with open(DATA_FILE, "r") as f:
-        data = json.load(f)
 
-    eligible_members = [m for m in ctx.guild.members if role in m.roles and str(m.id) in data]
-    if not eligible_members:
-        return
 
-    amount = min(amount, len(eligible_members))
-    winners = random.sample(eligible_members, amount)
-
-    # แสดง winner message
-    result_msg = f"**{title}**\n\nRandomly selected users 🎉\n\n"
-    for w in winners:
-        result_msg += f"{w.mention}\n\n"
-    result_msg += "."
-
-    await ctx.send(result_msg)
-
-    # บันทึก winner
-    log_winners(winners, title, data)
+# ------------------------------
+# Countdown Delete
+# ------------------------------
+@bot.event
+async def on_message_delete(message):
+    # ถ้า message ที่ลบเป็น countdown ของ bot
+    task = active_countdowns.get(message.id)
+    if task:
+        task.cancel()  # ยกเลิก task ไม่สุ่ม winner
+        del active_countdowns[message.id]
 
 
 
@@ -447,6 +460,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
