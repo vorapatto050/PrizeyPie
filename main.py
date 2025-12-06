@@ -250,7 +250,7 @@ async def randomusercount(ctx, *, args: str = None):
     if ctx.author.id != ctx.guild.owner_id:
         return
 
-    # Delete before sending
+    # Delete command message
     try:
         await ctx.message.delete()
     except:
@@ -277,21 +277,27 @@ async def randomusercount(ctx, *, args: str = None):
     title_raw = " ".join(parts[:-3])
     title = title_raw.replace("-", " ")
 
-    # -----------------------
-    # ใช้ Discord timestamp แทน loop นับถอยหลัง
-    # -----------------------
+    # แปลง target_time เป็น UNIX timestamp (UTC)
     unix_ts = int(target_time.timestamp())
+
+    # ส่ง countdown message แบบ timestamp
     countdown_msg = await ctx.send(
-        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n\n."
+        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n."
     )
 
-    # รอจนถึงเวลาจริง
+    # รอจนถึงเวลาที่กำหนด
     now = datetime.utcnow()
-    wait_seconds = (target_time - now).total_seconds()
-    if wait_seconds > 0:
-        await asyncio.sleep(wait_seconds)
+    remaining_seconds = (target_time - now).total_seconds()
+    if remaining_seconds > 0:
+        await asyncio.sleep(remaining_seconds)
 
-    # หลังถึงเวลา -> เลือก winner
+    # หลังจากถึงเวลาที่กำหนด ลบข้อความ countdown
+    try:
+        await countdown_msg.delete()
+    except:
+        pass
+
+    # ตรวจสอบ role และผู้ที่มีสิทธิ์
     role = discord.utils.get(ctx.guild.roles, name="Registered")
     if not role:
         return
@@ -306,15 +312,17 @@ async def randomusercount(ctx, *, args: str = None):
     amount = min(amount, len(eligible_members))
     winners = random.sample(eligible_members, amount)
 
+    # แสดง winner message
     result_msg = f"**{title}**\n\nRandomly selected users 🎉\n\n"
     for w in winners:
         result_msg += f"{w.mention}\n\n"
     result_msg += "."
 
-    await countdown_msg.delete()
     await ctx.send(result_msg)
 
+    # บันทึก winner
     log_winners(winners, title, data)
+
 
 
 # ------------------------------
@@ -439,5 +447,6 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
