@@ -285,7 +285,7 @@ async def randomusercount(ctx, *, args: str = None):
 
     # ส่งข้อความ countdown ครั้งเดียว
     countdown_msg = await ctx.send(
-        f"@everyone\n\n**{title}**\n\nUTC+0 Countdown: <t:{unix_ts}:R>\n."
+        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n."
     )
 
     # รอจนถึงเวลาจริง
@@ -443,3 +443,4 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
