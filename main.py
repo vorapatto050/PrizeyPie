@@ -250,7 +250,7 @@ async def randomusercount(ctx, *, args: str = None):
     if ctx.author.id != ctx.guild.owner_id:
         return
 
-    # Delete command message
+    # Delete before sending
     try:
         await ctx.message.delete()
     except:
@@ -263,36 +263,35 @@ async def randomusercount(ctx, *, args: str = None):
     if len(parts) < 4:
         return
 
-    # จำนวนผู้ชนะ
     amount_str = parts[-3]
     if not amount_str.isdigit():
         return
     amount = int(amount_str)
 
-    # เวลาเป้าหมาย
     datetime_str = f"{parts[-2]} {parts[-1]}"
     try:
         target_time = datetime.strptime(datetime_str, "%d-%m-%Y %H:%M")
     except ValueError:
         return
 
-    # ชื่อกิจกรรม
     title_raw = " ".join(parts[:-3])
     title = title_raw.replace("-", " ")
 
-    # สร้าง UNIX timestamp สำหรับ Discord
+    # -----------------------
+    # ใช้ Discord timestamp แทน loop นับถอยหลัง
+    # -----------------------
     unix_ts = int(target_time.timestamp())
-
-    # ส่งข้อความ countdown ครั้งเดียว
     countdown_msg = await ctx.send(
-        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n."
+        f"@everyone\n\n**{title}**\n\nCountdown: <t:{unix_ts}:R>\n\n."
     )
 
     # รอจนถึงเวลาจริง
-    while datetime.utcnow() < target_time:
-        await asyncio.sleep(1)
+    now = datetime.utcnow()
+    wait_seconds = (target_time - now).total_seconds()
+    if wait_seconds > 0:
+        await asyncio.sleep(wait_seconds)
 
-    # เลือกผู้ชนะ
+    # หลังถึงเวลา -> เลือก winner
     role = discord.utils.get(ctx.guild.roles, name="Registered")
     if not role:
         return
@@ -307,18 +306,15 @@ async def randomusercount(ctx, *, args: str = None):
     amount = min(amount, len(eligible_members))
     winners = random.sample(eligible_members, amount)
 
-    # ส่งผลผู้ชนะ
     result_msg = f"**{title}**\n\nRandomly selected users 🎉\n\n"
     for w in winners:
         result_msg += f"{w.mention}\n\n"
-    result_msg += "\n."
+    result_msg += "."
 
     await countdown_msg.delete()
     await ctx.send(result_msg)
 
-    # บันทึกผู้ชนะ
     log_winners(winners, title, data)
-
 
 
 # ------------------------------
@@ -443,4 +439,5 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
