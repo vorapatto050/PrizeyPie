@@ -242,16 +242,15 @@ async def randomuser(ctx, *, args: str = None):
 
 
 # ------------------------------
-# randomusercount (owner only)
+# randomusercount (owner only) - ใช้ Discord Timestamp
 # ------------------------------
 @bot.command()
 async def randomusercount(ctx, *, args: str = None):
-
     # Owner only
     if ctx.author.id != ctx.guild.owner_id:
         return
 
-    # Delete before sending
+    # Delete command message
     try:
         await ctx.message.delete()
     except:
@@ -264,36 +263,36 @@ async def randomusercount(ctx, *, args: str = None):
     if len(parts) < 4:
         return
 
+    # จำนวนผู้ชนะ
     amount_str = parts[-3]
     if not amount_str.isdigit():
         return
     amount = int(amount_str)
 
+    # เวลาเป้าหมาย
     datetime_str = f"{parts[-2]} {parts[-1]}"
     try:
         target_time = datetime.strptime(datetime_str, "%d-%m-%Y %H:%M")
     except ValueError:
         return
 
+    # ชื่อกิจกรรม
     title_raw = " ".join(parts[:-3])
     title = title_raw.replace("-", " ")
 
-    countdown_msg = await ctx.send(f"@everyone\n\n**{title}**\n\nUTC+0 time: calculating...")
+    # สร้าง UNIX timestamp สำหรับ Discord
+    unix_ts = int(target_time.timestamp())
 
-    while True:
-        now = datetime.utcnow()
-        if now >= target_time:
-            break
+    # ส่งข้อความ countdown ครั้งเดียว
+    countdown_msg = await ctx.send(
+        f"@everyone\n\n**{title}**\n\nUTC+0 Countdown: <t:{unix_ts}:R>\n."
+    )
 
-        remaining = target_time - now
-        hours, remainder = divmod(int(remaining.total_seconds()), 3600)
-        minutes, seconds = divmod(remainder, 60)
-
-        await countdown_msg.edit(
-            content=f"@everyone\n\n**{title}**\n\nUTC+0 time: {hours:02d}:{minutes:02d}:{seconds:02d}\n\n."
-        )
+    # รอจนถึงเวลาจริง
+    while datetime.utcnow() < target_time:
         await asyncio.sleep(1)
 
+    # เลือกผู้ชนะ
     role = discord.utils.get(ctx.guild.roles, name="Registered")
     if not role:
         return
@@ -302,21 +301,22 @@ async def randomusercount(ctx, *, args: str = None):
         data = json.load(f)
 
     eligible_members = [m for m in ctx.guild.members if role in m.roles and str(m.id) in data]
-
     if not eligible_members:
         return
 
     amount = min(amount, len(eligible_members))
     winners = random.sample(eligible_members, amount)
 
+    # ส่งผลผู้ชนะ
     result_msg = f"**{title}**\n\nRandomly selected users 🎉\n\n"
     for w in winners:
         result_msg += f"{w.mention}\n\n"
-    result_msg += "."
+    result_msg += "\n."
 
     await countdown_msg.delete()
     await ctx.send(result_msg)
 
+    # บันทึกผู้ชนะ
     log_winners(winners, title, data)
 
 
@@ -440,5 +440,6 @@ async def on_command_error(ctx, error):
 # Run the full bot
 # ------------------------------
 server_on()
+
 
 bot.run(os.getenv('TOKEN'))
