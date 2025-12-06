@@ -1,3 +1,4 @@
+import os
 import discord
 from discord.ext import commands
 import json
@@ -5,7 +6,7 @@ import os
 import random
 import asyncio
 from datetime import datetime
-
+from myserver import server_on
 
 
 # ------------------------------
@@ -438,4 +439,6 @@ async def on_command_error(ctx, error):
 # ------------------------------
 # Run the full bot
 # ------------------------------
-bot.run("MTQ0Mjg1NjI4NTg4MzA3Njc4OQ.GZ9JTb.X934X6t3z8QMzjfbVKKho2umK3JC43rpVfEk8E")
+server_on()
+
+bot.run(os.getenv('TOKEN'))
