@@ -79,6 +79,35 @@ async def on_member_remove(member):
 
 
 # ------------------------------
+# Remove winnerlogs from database if user leaves
+# ------------------------------
+@bot.event
+async def on_member_remove(member):
+    user_id = str(member.id)
+
+    # ------------------ ลบจาก users.json ------------------
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+        if user_id in data:
+            del data[user_id]
+            with open(DATA_FILE, "w") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            print(f"Username for {member.name} ({member.id}) is now available.")
+
+    # ------------------ ลบจาก winners.json ------------------
+    if os.path.exists(WINNERS_FILE):
+        with open(WINNERS_FILE, "r") as f:
+            winners_data = json.load(f)
+        if user_id in winners_data:
+            del winners_data[user_id]
+            with open(WINNERS_FILE, "w") as f:
+                json.dump(winners_data, f, ensure_ascii=False, indent=4)
+            print(f"Removed {member.name} ({member.id}) from winners.json")
+
+
+
+# ------------------------------
 # Register command (everyone can use)
 # ------------------------------
 @bot.command()
@@ -455,6 +484,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
