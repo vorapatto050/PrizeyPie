@@ -624,10 +624,53 @@ async def countdown(ctx):
 
 
 # ------------------------------
+# !winnersclear (owner only) - เคลียร์ winners.json
+# ------------------------------
+@bot.command()
+async def winnersclear(ctx):
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete command message
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    with open(WINNERS_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f, ensure_ascii=False, indent=4)
+
+    await ctx.send("✅ winners.json has been cleared.", delete_after=5)
+
+
+
+# ------------------------------
+# !countdownclear (owner only) - เคลียร์ countdown.json
+# ------------------------------
+@bot.command()
+async def countdownclear(ctx):
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete command message
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    with open(COUNTDOWN_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f, ensure_ascii=False, indent=4)
+
+    await ctx.send("✅ countdown.json has been cleared.", delete_after=5)
+
+
+
+# ------------------------------
 # Run the full bot
 # ------------------------------
 server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
