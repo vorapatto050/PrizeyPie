@@ -567,27 +567,35 @@ async def on_message_delete(message):
 # ------------------------------
 @bot.command()
 async def json(ctx):
+    # Owner only
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete command message
     try:
-        now = datetime.utcnow().strftime("%d-%m-%y")
-        users_file = f"users({now}).txt"
-        winners_file = f"winners({now}).txt"
-        countdown_file = f"countdown({now}).txt"
+        await ctx.message.delete()
+    except:
+        pass
 
-        # Save JSON to files
-        with open(DATA_FILE, "r") as f:
-            with open(users_file, "w", encoding="utf-8") as out:
-                out.write(json.dumps(json.load(f), ensure_ascii=False, indent=4))
+    # Prepare file names with date
+    date_str = datetime.utcnow().strftime("%d-%m-%y")
+    users_file = f"users({date_str}).txt"
+    winners_file = f"winners({date_str}).txt"
+    countdown_file = f"countdown({date_str}).txt"
 
-        with open(WINNERS_FILE, "r") as f:
-            with open(winners_file, "w", encoding="utf-8") as out:
-                out.write(json.dumps(json.load(f), ensure_ascii=False, indent=4))
+    try:
+        # Copy JSON content to temp .txt files
+        for src, dst in [(DATA_FILE, users_file), (WINNERS_FILE, winners_file), (COUNTDOWN_FILE, countdown_file)]:
+            with open(src, "r", encoding="utf-8") as f_src, open(dst, "w", encoding="utf-8") as f_dst:
+                f_dst.write(f_src.read())
 
-        with open(COUNTDOWN_FILE, "r") as f:
-            with open(countdown_file, "w", encoding="utf-8") as out:
-                out.write(json.dumps(json.load(f), ensure_ascii=False, indent=4))
+        # Find channel #json
+        json_channel = discord.utils.get(ctx.guild.text_channels, name="json")
+        if json_channel is None:
+            json_channel = ctx.channel  # fallback
 
         # Send files
-        await ctx.send(
+        await json_channel.send(
             f"Exported JSON Data (.txt):\n\n"
             f"{users_file}\n"
             f"{winners_file}\n"
@@ -600,15 +608,15 @@ async def json(ctx):
         )
 
     except Exception:
-        pass
+        pass  # do not reply on error
 
-    finally:
-        # Remove temp files
-        for file in [users_file, winners_file, countdown_file]:
-            try:
-                os.remove(file)
-            except:
-                pass
+    # Clean temp files
+    try:
+        os.remove(users_file)
+        os.remove(winners_file)
+        os.remove(countdown_file)
+    except:
+        pass
 
 
 
@@ -619,6 +627,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
