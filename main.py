@@ -499,31 +499,25 @@ async def clear(ctx):
 @bot.event
 async def on_message(message):
     if message.author.bot:
-        return  # Do not delete messages from bots themselves
+        return
 
-    # Check if the author is the server owner
     is_owner = message.author.id == message.guild.owner_id
+    whitelist_owner = ["!register", "!randomuser", "!randomusercount", "!clear", "!winnerlog", "!countstatus", "!json"]
 
-    # List of commands exempt from deletion
-    whitelist_owner = ["!register", "!randomuser", "!randomusercount", "!clear", "!winnerlog"]
-
-    if is_owner:
-        # Owner: delete only messages starting with '!' that are not in the whitelist
-        if message.content.startswith("!") and not any(message.content.startswith(cmd) for cmd in whitelist_owner):
-            try:
-                await message.delete()
-            except:
-                pass
-    else:
-        # Regular users: delete all messages except !register
-        if not message.content.startswith("!register"):
-            try:
-                await message.delete()
-            except:
-                pass
-
-    # Must call process_commands so that commands continue to work
+    # ✅ Process commands ก่อน
     await bot.process_commands(message)
+
+    # ลบข้อความหลัง process_commands
+    try:
+        if is_owner:
+            if message.content.startswith("!") and not any(message.content.startswith(cmd) for cmd in whitelist_owner):
+                await message.delete()
+        else:
+            if not message.content.startswith("!register"):
+                await message.delete()
+    except:
+        pass
+
 
 
 
@@ -634,6 +628,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
