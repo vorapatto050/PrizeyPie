@@ -563,9 +563,76 @@ async def on_message_delete(message):
 
 
 # ------------------------------
+# json (owner only) - export 3 JSON files
+# ------------------------------
+@bot.command()
+async def json(ctx):
+
+    # Owner only
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete command message
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    # Get date
+    date_str = datetime.utcnow().strftime("%d-%m-%y")
+
+    # Prepare filenames
+    users_file = f"users({date_str}).txt"
+    winners_file = f"winners({date_str}).txt"
+    countdown_file = f"countdown({date_str}).txt"
+
+    # Write temp text files
+    try:
+        with open(DATA_FILE, "r") as f:
+            users_data = f.read()
+        with open(users_file, "w", encoding="utf-8") as f:
+            f.write(users_data)
+
+        with open(WINNERS_FILE, "r") as f:
+            winners_data = f.read()
+        with open(winners_file, "w", encoding="utf-8") as f:
+            f.write(winners_data)
+
+        with open(COUNTDOWN_FILE, "r") as f:
+            countdown_data = f.read()
+        with open(countdown_file, "w", encoding="utf-8") as f:
+            f.write(countdown_data)
+
+        await ctx.send(
+            f"Exported JSON Data (.txt):\n\n"
+            f"{users_file}\n"
+            f"{winners_file}\n"
+            f"{countdown_file}",
+            files=[
+                discord.File(users_file),
+                discord.File(winners_file),
+                discord.File(countdown_file)
+            ]
+        )
+
+    except Exception:
+        pass  # do not reply on error
+
+    # Clean temp files
+    try:
+        os.remove(users_file)
+        os.remove(winners_file)
+        os.remove(countdown_file)
+    except:
+        pass
+
+
+
+# ------------------------------
 # Run the full bot
 # ------------------------------
 server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
