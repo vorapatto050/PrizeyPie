@@ -499,25 +499,31 @@ async def clear(ctx):
 @bot.event
 async def on_message(message):
     if message.author.bot:
-        return
+        return  # Do not delete messages from bots themselves
 
+    # Check if the author is the server owner
     is_owner = message.author.id == message.guild.owner_id
-    whitelist_owner = ["!register", "!randomuser", "!randomusercount", "!clear", "!winnerlog", "!countstatus", "!json"]
 
-    # ✅ Process commands ก่อน
+    # List of commands exempt from deletion
+    whitelist_owner = ["!register", "!randomuser", "!randomusercount", "!clear", "!winnerlog"]
+
+    if is_owner:
+        # Owner: delete only messages starting with '!' that are not in the whitelist
+        if message.content.startswith("!") and not any(message.content.startswith(cmd) for cmd in whitelist_owner):
+            try:
+                await message.delete()
+            except:
+                pass
+    else:
+        # Regular users: delete all messages except !register
+        if not message.content.startswith("!register"):
+            try:
+                await message.delete()
+            except:
+                pass
+
+    # Must call process_commands so that commands continue to work
     await bot.process_commands(message)
-
-    # ลบข้อความหลัง process_commands
-    try:
-        if is_owner:
-            if message.content.startswith("!") and not any(message.content.startswith(cmd) for cmd in whitelist_owner):
-                await message.delete()
-        else:
-            if not message.content.startswith("!register"):
-                await message.delete()
-    except:
-        pass
-
 
 
 
@@ -557,80 +563,9 @@ async def on_message_delete(message):
 
 
 # ------------------------------
-# Export JSON files as .txt (owner only)
-# ------------------------------
-@bot.command()
-async def json(ctx):
-    # Owner only
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-
-    # Delete command message
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-    # Target channel
-    json_channel = discord.utils.get(ctx.guild.text_channels, name="json")
-    if not json_channel:
-        json_channel = ctx.channel  # fallback if #json doesn't exist
-
-    # Prepare filenames with date
-    today_str = datetime.utcnow().strftime("%d-%m-%y")
-    users_file = f"users({today_str}).txt"
-    winners_file = f"winners({today_str}).txt"
-    countdown_file = f"countdown({today_str}).txt"
-
-    try:
-        # Copy JSON data into temporary .txt files
-        with open(DATA_FILE, "r") as f:
-            data = json.load(f)
-        with open(users_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-        with open(WINNERS_FILE, "r") as f:
-            data = json.load(f)
-        with open(winners_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-        with open(COUNTDOWN_FILE, "r") as f:
-            data = json.load(f)
-        with open(countdown_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-        # Send files
-        await json_channel.send(
-            f"Exported JSON Data (.txt):",
-            files=[
-                discord.File(users_file),
-                discord.File(winners_file),
-                discord.File(countdown_file)
-            ]
-        )
-
-    except Exception:
-        pass  # do not reply on error
-
-    # Clean up temp files
-    for f in [users_file, winners_file, countdown_file]:
-        try:
-            os.remove(f)
-        except:
-            pass
-
-
-
-# ------------------------------
 # Run the full bot
 # ------------------------------
 server_on()
 
 
 bot.run(os.getenv('TOKEN'))
-
-
-
-
-
-
