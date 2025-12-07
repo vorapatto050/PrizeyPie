@@ -581,7 +581,6 @@ async def json(ctx):
     # หาแชนแนล #json
     json_channel = discord.utils.get(ctx.guild.text_channels, name="json")
     if json_channel is None:
-        await ctx.send("❗ ไม่พบห้องชื่อ #json")
         return
 
     # วันที่สำหรับชื่อไฟล์
@@ -616,10 +615,15 @@ async def json(ctx):
             f.write(content)
         files_to_send.append(discord.File(filename))
 
-    if files_to_send:
+    # ไม่มีไฟล์ให้ส่ง → pass
+    if not files_to_send:
+        return
+
+    # ส่งไฟล์ทั้งหมด
+    try:
         await json_channel.send("📁 **Exported JSON Data (.txt):**", files=files_to_send)
-    else:
-        await json_channel.send("No JSON data found to export.")
+    except:
+        pass
 
 
 
@@ -630,6 +634,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
