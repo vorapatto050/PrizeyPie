@@ -21,6 +21,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 DATA_FILE = "users.json"
 WINNERS_FILE = "winners.json"
+COUNTDOWN_FILE = "countdown.json"
 
 
 
@@ -28,7 +29,7 @@ WINNERS_FILE = "winners.json"
 # ------------------------------
 # Create data files if not exists
 # ------------------------------
-for file in [DATA_FILE, WINNERS_FILE]:
+for file in [DATA_FILE, WINNERS_FILE, COUNTDOWN_FILE]:
     if not os.path.exists(file):
         with open(file, "w") as f:
             json.dump({}, f)
@@ -313,6 +314,21 @@ async def randomusercount(ctx, *, args: str = None):
         f"@everyone\n\n**{title}**\n\nCountdown: <t:{timestamp}:R>\n\n."
     )
 
+    # Save countdown info
+with open(COUNTDOWN_FILE, "r") as f:
+    cdata = json.load(f)
+
+cdata[str(countdown_msg.id)] = {
+    "title": title,
+    "timestamp": timestamp,
+    "channel_id": countdown_msg.channel.id
+}
+
+with open(COUNTDOWN_FILE, "w") as f:
+    json.dump(cdata, f, ensure_ascii=False, indent=4)
+
+    
+
     while True:
         now = datetime.utcnow()
         remaining = (target_time - now).total_seconds()
@@ -344,6 +360,16 @@ async def randomusercount(ctx, *, args: str = None):
 
     await countdown_msg.delete()  # Delete countdown
 
+    # Remove countdown from file
+with open(COUNTDOWN_FILE, "r") as f:
+    cdata = json.load(f)
+
+if str(countdown_msg.id) in cdata:
+    del cdata[str(countdown_msg.id)]
+
+with open(COUNTDOWN_FILE, "w") as f:
+    json.dump(cdata, f, ensure_ascii=False, indent=4)
+
     if not eligible_members:
         return  # Do nothing if no eligible users
 
@@ -359,6 +385,40 @@ async def randomusercount(ctx, *, args: str = None):
     await ctx.send(msg)
     log_winners(winners, title, data)
 
+
+
+# ------------------------------
+# countstatus (owner only) - ใช้ Discord Timestamp
+# ------------------------------
+@bot.command()
+async def countstatus(ctx):
+
+    # delete user command
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    status_channel = discord.utils.get(ctx.guild.text_channels, name="count-status")
+    if status_channel is None:
+        status_channel = ctx.channel  # fallback
+
+    # user must reply to countdown message
+    if not ctx.message.reference:
+        await status_channel.send("Please reply to a countdown message.")
+        return
+
+    reply_id = str(ctx.message.reference.message_id)
+
+    # load file
+    with open(COUNTDOWN_FILE, "r") as f:
+        cdata = json.load(f)
+
+    if reply_id in cdata:
+        title = cdata[reply_id]["title"]
+        await status_channel.send(f"Countdown: **{title}** is **working.**")
+    else:
+        await status_channel.send("Countdown: **not working.**")
 
 
 
@@ -484,6 +544,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
