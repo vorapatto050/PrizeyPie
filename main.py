@@ -540,6 +540,9 @@ async def on_command_error(ctx, error):
 
 
 
+# ------------------------------
+# Countdown message Remove
+# ------------------------------
 @bot.event
 async def on_message_delete(message):
     if message.author == bot.user:
@@ -559,55 +562,6 @@ async def on_message_delete(message):
 
 
 
-@bot.command()
-async def countjson(ctx):
-
-    # Owner only (ป้องกันไม่ให้ใครก็ใช้)
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-
-    # ลบคำสั่งของ user
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-    # โหลดข้อมูล countdown.json
-    with open(COUNTDOWN_FILE, "r") as f:
-        cdata = json.load(f)
-
-    # ถ้าไม่มีข้อมูลเลย
-    if not cdata:
-        embed = discord.Embed(
-            title="Countdown JSON",
-            description="ไม่มี countdown ที่กำลังทำงานอยู่",
-            color=discord.Color.red()
-        )
-        await ctx.channel.send(embed=embed)
-        return
-
-    # เตรียมข้อความแสดงผลทั้งหมด
-    text = ""
-    for msg_id, info in cdata.items():
-        title = info.get("title", "ไม่มีชื่อ")
-        timestamp = info.get("timestamp", "ไม่มีข้อมูลเวลา")
-        channel_id = info.get("channel_id", "unknown")
-
-        text += f"**Message ID:** {msg_id}\n"
-        text += f"• Title: {title}\n"
-        text += f"• Timestamp: {timestamp}\n"
-        text += f"• Channel ID: {channel_id}\n"
-        text += "---------------------------\n"
-
-    # ส่ง embed
-    embed = discord.Embed(
-        title="Countdown JSON – ข้อมูลทั้งหมด",
-        description=text,
-        color=discord.Color.green()
-    )
-
-    await ctx.channel.send(embed=embed)
-
 # ------------------------------
 # Run the full bot
 # ------------------------------
@@ -615,6 +569,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
