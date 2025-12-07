@@ -563,7 +563,7 @@ async def on_message_delete(message):
 
 
 # ------------------------------
-# json (owner only) — ส่งไฟล์ users, winners, countdown แบบ .txt
+# json (owner only) — ส่งไฟล์ users, winners, countdown แบบ .txt ไป #json
 # ------------------------------
 @bot.command()
 async def json(ctx):
@@ -577,6 +577,12 @@ async def json(ctx):
         await ctx.message.delete()
     except:
         pass
+
+    # หาแชนแนล #json
+    json_channel = discord.utils.get(ctx.guild.text_channels, name="json")
+    if json_channel is None:
+        await ctx.send("❗ ไม่พบห้องชื่อ #json")
+        return
 
     # วันที่สำหรับชื่อไฟล์
     date_str = datetime.utcnow().strftime("%d-%m-%y")
@@ -611,9 +617,9 @@ async def json(ctx):
         files_to_send.append(discord.File(filename))
 
     if files_to_send:
-        await ctx.send("📁 **Exported JSON Data (.txt):**", files=files_to_send)
+        await json_channel.send("📁 **Exported JSON Data (.txt):**", files=files_to_send)
     else:
-        await ctx.send("No JSON data found to export.")
+        await json_channel.send("No JSON data found to export.")
 
 
 
@@ -624,6 +630,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
