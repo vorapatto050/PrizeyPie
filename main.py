@@ -563,88 +563,9 @@ async def on_message_delete(message):
 
 
 # ------------------------------
-# json (owner only) — ส่งไฟล์ users, winners, countdown แบบ .txt ไป #json
-# ------------------------------
-@bot.command()
-async def json(ctx):
-
-    # Owner only
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-
-    # Delete command
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-    # หาแชนแนล #json
-    json_channel = discord.utils.get(ctx.guild.text_channels, name="json")
-    if json_channel is None:
-        return
-
-    # วันที่สำหรับชื่อไฟล์
-    date_str = datetime.utcnow().strftime("%d-%m-%y")
-
-    files_to_send = []
-
-    # users.json
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            content = f.read()
-        filename = f"users({date_str}).txt"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(content)
-        files_to_send.append(discord.File(filename))
-
-    # winners.json
-    if os.path.exists(WINNERS_FILE):
-        with open(WINNERS_FILE, "r", encoding="utf-8") as f:
-            content = f.read()
-        filename = f"winners({date_str}).txt"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(content)
-        files_to_send.append(discord.File(filename))
-
-    # countdown.json
-    if os.path.exists(COUNTDOWN_FILE):
-        with open(COUNTDOWN_FILE, "r", encoding="utf-8") as f:
-            content = f.read()
-        filename = f"countdown({date_str}).txt"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(content)
-        files_to_send.append(discord.File(filename))
-
-    # ไม่มีไฟล์ให้ส่ง → pass
-    if not files_to_send:
-        return
-
-    # ส่งไฟล์ทั้งหมด
-    try:
-        await json_channel.send("📁 **Exported JSON Data (.txt):**", files=files_to_send)
-    except:
-        pass
-
-
-
-# ------------------------------
 # Run the full bot
 # ------------------------------
 server_on()
 
 
 bot.run(os.getenv('TOKEN'))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
