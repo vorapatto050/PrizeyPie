@@ -563,11 +563,62 @@ async def on_message_delete(message):
 
 
 # ------------------------------
+# Json
+# ------------------------------
+@bot.command()
+async def json(ctx):
+    try:
+        now = datetime.utcnow().strftime("%d-%m-%y")
+        users_file = f"users({now}).txt"
+        winners_file = f"winners({now}).txt"
+        countdown_file = f"countdown({now}).txt"
+
+        # Save JSON to files
+        with open(DATA_FILE, "r") as f:
+            with open(users_file, "w", encoding="utf-8") as out:
+                out.write(json.dumps(json.load(f), ensure_ascii=False, indent=4))
+
+        with open(WINNERS_FILE, "r") as f:
+            with open(winners_file, "w", encoding="utf-8") as out:
+                out.write(json.dumps(json.load(f), ensure_ascii=False, indent=4))
+
+        with open(COUNTDOWN_FILE, "r") as f:
+            with open(countdown_file, "w", encoding="utf-8") as out:
+                out.write(json.dumps(json.load(f), ensure_ascii=False, indent=4))
+
+        # Send files
+        await ctx.send(
+            f"Exported JSON Data (.txt):\n\n"
+            f"{users_file}\n"
+            f"{winners_file}\n"
+            f"{countdown_file}",
+            files=[
+                discord.File(users_file),
+                discord.File(winners_file),
+                discord.File(countdown_file)
+            ]
+        )
+
+    except Exception:
+        pass
+
+    finally:
+        # Remove temp files
+        for file in [users_file, winners_file, countdown_file]:
+            try:
+                os.remove(file)
+            except:
+                pass
+
+
+
+# ------------------------------
 # Run the full bot
 # ------------------------------
 server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
