@@ -563,9 +563,71 @@ async def on_message_delete(message):
 
 
 # ------------------------------
+# Helper function: send JSON as .txt (owner only)
+# ------------------------------
+async def send_json_file(ctx, file_path, display_name):
+    # Owner only
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Target channel
+    json_channel = discord.utils.get(ctx.guild.text_channels, name="json")
+    if not json_channel:
+        json_channel = ctx.channel  # fallback if #json doesn't exist
+
+    # Prepare filename with date
+    today_str = datetime.utcnow().strftime("%d-%m-%y")
+    temp_file = f"{display_name}({today_str}).txt"
+
+    try:
+        # Copy JSON data into .txt
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+        # Send file
+        await json_channel.send(
+            f"{display_name.capitalize()} JSON Data (.txt):",
+            files=[discord.File(temp_file)]
+        )
+    except Exception:
+        pass  # do not reply on error
+    finally:
+        # Clean up temp file
+        try:
+            os.remove(temp_file)
+        except:
+            pass
+
+# ------------------------------
+# !users command
+# ------------------------------
+@bot.command()
+async def users(ctx):
+    await send_json_file(ctx, DATA_FILE, "users")
+
+# ------------------------------
+# !winners command
+# ------------------------------
+@bot.command()
+async def winners(ctx):
+    await send_json_file(ctx, WINNERS_FILE, "winners")
+
+# ------------------------------
+# !countdown command
+# ------------------------------
+@bot.command()
+async def countdown(ctx):
+    await send_json_file(ctx, COUNTDOWN_FILE, "countdown")
+
+
+
+# ------------------------------
 # Run the full bot
 # ------------------------------
 server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
