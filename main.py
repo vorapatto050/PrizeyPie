@@ -25,7 +25,6 @@ COUNTDOWN_FILE = "countdown.json"
 
 
 
-
 # ------------------------------
 # Create data files if not exists
 # ------------------------------
@@ -314,20 +313,21 @@ async def randomusercount(ctx, *, args: str = None):
         f"@everyone\n\n**{title}**\n\nCountdown: <t:{timestamp}:R>\n\n."
     )
 
-    # Save countdown info
-with open(COUNTDOWN_FILE, "r") as f:
-    cdata = json.load(f)
+    # ------------------------------
+    # B: Save countdown into countdown.json
+    # ------------------------------
+    with open(COUNTDOWN_FILE, "r") as f:
+        cdata = json.load(f)
 
-cdata[str(countdown_msg.id)] = {
-    "title": title,
-    "timestamp": timestamp,
-    "channel_id": countdown_msg.channel.id
-}
+    cdata[str(countdown_msg.id)] = {
+        "title": title,
+        "timestamp": timestamp,
+        "channel_id": countdown_msg.channel.id
+    }
 
-with open(COUNTDOWN_FILE, "w") as f:
-    json.dump(cdata, f, ensure_ascii=False, indent=4)
-
-    
+    with open(COUNTDOWN_FILE, "w") as f:
+        json.dump(cdata, f, ensure_ascii=False, indent=4)
+    # ------------------------------
 
     while True:
         now = datetime.utcnow()
@@ -341,7 +341,6 @@ with open(COUNTDOWN_FILE, "w") as f:
         except discord.NotFound:
             return  # stop if message deleted
 
-        # เปลี่ยน sleep ตามเวลาที่เหลือ
         if remaining <= 10:
             await asyncio.sleep(1)
         else:
@@ -360,23 +359,25 @@ with open(COUNTDOWN_FILE, "w") as f:
 
     await countdown_msg.delete()  # Delete countdown
 
-    # Remove countdown from file
-with open(COUNTDOWN_FILE, "r") as f:
-    cdata = json.load(f)
+    # ------------------------------
+    # B: Remove countdown from countdown.json
+    # ------------------------------
+    with open(COUNTDOWN_FILE, "r") as f:
+        cdata = json.load(f)
 
-if str(countdown_msg.id) in cdata:
-    del cdata[str(countdown_msg.id)]
+    if str(countdown_msg.id) in cdata:
+        del cdata[str(countdown_msg.id)]
 
-with open(COUNTDOWN_FILE, "w") as f:
-    json.dump(cdata, f, ensure_ascii=False, indent=4)
+    with open(COUNTDOWN_FILE, "w") as f:
+        json.dump(cdata, f, ensure_ascii=False, indent=4)
+    # ------------------------------
 
     if not eligible_members:
-        return  # Do nothing if no eligible users
+        return
 
     amount = min(amount, len(eligible_members))
     winners = random.sample(eligible_members, amount)
 
-    # Send winners message
     msg = f"**{title}**\n\nRandomly selected users 🎉\n\n"
     for w in winners:
         msg += f"{w.mention}\n\n"
@@ -386,14 +387,17 @@ with open(COUNTDOWN_FILE, "w") as f:
     log_winners(winners, title, data)
 
 
-
 # ------------------------------
 # countstatus (owner only) - ใช้ Discord Timestamp
 # ------------------------------
 @bot.command()
 async def countstatus(ctx):
 
-    # delete user command
+    # Owner only
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete user command
     try:
         await ctx.message.delete()
     except:
@@ -401,16 +405,15 @@ async def countstatus(ctx):
 
     status_channel = discord.utils.get(ctx.guild.text_channels, name="count-status")
     if status_channel is None:
-        status_channel = ctx.channel  # fallback
+        status_channel = ctx.channel
 
-    # user must reply to countdown message
+    # Must reply to a countdown message
     if not ctx.message.reference:
         await status_channel.send("Please reply to a countdown message.")
         return
 
     reply_id = str(ctx.message.reference.message_id)
 
-    # load file
     with open(COUNTDOWN_FILE, "r") as f:
         cdata = json.load(f)
 
@@ -544,7 +547,6 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
-
 
 
 
