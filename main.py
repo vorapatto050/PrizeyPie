@@ -539,6 +539,26 @@ async def on_command_error(ctx, error):
         pass
 
 
+
+@bot.event
+async def on_message_delete(message):
+    if message.author == bot.user:
+
+        with open(COUNTDOWN_FILE, "r") as f:
+            cdata = json.load(f)
+
+        msg_id = str(message.id)
+
+        if msg_id in cdata:
+            del cdata[msg_id]
+
+            with open(COUNTDOWN_FILE, "w") as f:
+                json.dump(cdata, f, ensure_ascii=False, indent=4)
+
+            print(f"Countdown removed (message deleted): {msg_id}")
+
+
+
 @bot.command()
 async def countjson(ctx):
 
@@ -595,6 +615,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
