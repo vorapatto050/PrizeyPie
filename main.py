@@ -403,7 +403,7 @@ async def countstatus(ctx):
     except:
         pass
 
-    status_channel = discord.utils.get(ctx.guild.text_channels, name="count-status")
+    status_channel = discord.utils.get(ctx.guild.text_channels, name="countstatus")
     if status_channel is None:
         status_channel = ctx.channel
 
@@ -445,7 +445,7 @@ async def winnerlog(ctx, member: discord.Member = None, channel: discord.TextCha
         member = ctx.author
 
     if channel is None:
-        channel = discord.utils.get(ctx.guild.text_channels, name="winnerlogs") or ctx.channel
+        channel = discord.utils.get(ctx.guild.text_channels, name="winnerlog") or ctx.channel
 
     user_id = str(member.id)
     if not os.path.exists(WINNERS_FILE):
@@ -569,6 +569,7 @@ server_on()
 
 
 bot.run(os.getenv('TOKEN'))
+
 
 
 
