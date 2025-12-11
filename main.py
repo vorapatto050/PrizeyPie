@@ -174,30 +174,70 @@ async def reg(ctx, username: str = None):
         )
 
 # ------------------------------
-# Command: !usersfile - Send users.json as .txt with date
+# Send JSON files to #data-files
+# ------------------------------
+async def send_json_file(ctx, file_path, display_name):
+
+    if not os.path.exists(file_path):
+        return
+
+    date_str = datetime.utcnow().strftime("%d-%m-%y")
+    filename = f"{display_name}({date_str}).txt"
+
+    # find channel #data-files
+    channel = discord.utils.get(ctx.guild.text_channels, name="data-files")
+    if not channel:
+        return
+
+    await channel.send(file=discord.File(file_path, filename=filename))
+
+# ------------------------------
+# Command: !usersfile
 # ------------------------------
 @bot.command()
 async def usersfile(ctx):
-    # Owner only
+
     if ctx.author.id != ctx.guild.owner_id:
         return
 
-    # Delete command message
     try:
         await ctx.message.delete()
     except:
         pass
 
-    if not os.path.exists(USERS_FILE):
-        await ctx.send("No users.json file found.")
+    await send_json_file(ctx, USERS_FILE, "users")
+
+# ------------------------------
+# Command: !winnersfile
+# ------------------------------
+@bot.command()
+async def winnersfile(ctx):
+
+    if ctx.author.id != ctx.guild.owner_id:
         return
 
-    # Format date
-    date_str = datetime.utcnow().strftime("%d-%m-%y")
-    filename = f"users({date_str}).txt"
+    try:
+        await ctx.message.delete()
+    except:
+        pass
 
-    # Send the file
-    await ctx.send(file=discord.File(USERS_FILE, filename=filename))
+    await send_json_file(ctx, WINNERS_FILE, "winners")
+
+# ------------------------------
+# Command: !countdownsfile
+# ------------------------------
+@bot.command()
+async def countdownsfile(ctx):
+
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    await send_json_file(ctx, COUNTDOWNS_FILE, "countdowns")
 
 # --------------------------------------------------------
 # Auto-register missing usernames + Auto-fix nickname
