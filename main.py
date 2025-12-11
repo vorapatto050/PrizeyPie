@@ -2,6 +2,7 @@ import os
 import json
 import discord
 from discord.ext import commands
+from myserver import server_on
 
 # ------------------------------
 # Setup bot intents
@@ -254,4 +255,6 @@ async def on_ready():
 # ------------------------------
 # Run bot
 # ------------------------------
+server_on()
+
 bot.run(os.getenv('TOKEN'))
