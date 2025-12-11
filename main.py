@@ -173,6 +173,32 @@ async def reg(ctx, username: str = None):
             f"from `{old_name.lower()}` → `{lower_username}`"
         )
 
+# ------------------------------
+# Command: !usersfile - Send users.json as .txt with date
+# ------------------------------
+@bot.command()
+async def usersfile(ctx):
+    # Owner only
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete command message
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    if not os.path.exists(USERS_FILE):
+        await ctx.send("No users.json file found.")
+        return
+
+    # Format date
+    date_str = datetime.utcnow().strftime("%d-%m-%y")
+    filename = f"users({date_str}).txt"
+
+    # Send the file
+    await ctx.send(file=discord.File(USERS_FILE, filename=filename))
+
 # --------------------------------------------------------
 # Auto-register missing usernames + Auto-fix nickname
 # --------------------------------------------------------
