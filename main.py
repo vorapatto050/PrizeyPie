@@ -2,6 +2,7 @@ import os
 import json
 import discord
 from discord.ext import commands
+from datetime import datetime
 from myserver import server_on
 
 # ------------------------------
@@ -171,6 +172,39 @@ async def reg(ctx, username: str = None):
             f":green_square: {ctx.author.mention} updated their username "
             f"from `{old_name.lower()}` → `{lower_username}`"
         )
+
+# ------------------------------
+# Command: !json
+# ------------------------------
+@bot.command()
+async def json(ctx):
+    # Owner only
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    # Delete the command message
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    # Get today's date
+    date_str = datetime.utcnow().strftime("%d-%m-%y")
+
+    # List of files to send
+    files_to_send = [USERS_FILE, WINNERS_FILE, COUNTDOWNS_FILE]
+
+    for file_path in files_to_send:
+        if os.path.exists(file_path):
+            # Create a filename with date
+            base_name = file_path.split('.')[0]  # e.g., 'users'
+            filename = f"{base_name}({date_str}).txt"
+
+            # Send the file
+            try:
+                await ctx.send(file=discord.File(file_path, filename=filename))
+            except Exception as e:
+                print(f"Failed to send {file_path}: {e}")
 
 # --------------------------------------------------------
 # Auto-register missing usernames + Auto-fix nickname
