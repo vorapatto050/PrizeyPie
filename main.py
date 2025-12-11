@@ -192,10 +192,10 @@ async def send_json_file(ctx, file_path, display_name):
     await channel.send(file=discord.File(file_path, filename=filename))
 
 # ------------------------------
-# Command: !usersfile
+# Command: !users
 # ------------------------------
 @bot.command()
-async def usersfile(ctx):
+async def users(ctx):
 
     if ctx.author.id != ctx.guild.owner_id:
         return
@@ -208,10 +208,10 @@ async def usersfile(ctx):
     await send_json_file(ctx, USERS_FILE, "users")
 
 # ------------------------------
-# Command: !winnersfile
+# Command: !winners
 # ------------------------------
 @bot.command()
-async def winnersfile(ctx):
+async def winners(ctx):
 
     if ctx.author.id != ctx.guild.owner_id:
         return
@@ -224,10 +224,10 @@ async def winnersfile(ctx):
     await send_json_file(ctx, WINNERS_FILE, "winners")
 
 # ------------------------------
-# Command: !countdownsfile
+# Command: !countdowns
 # ------------------------------
 @bot.command()
-async def countdownsfile(ctx):
+async def countdowns(ctx):
 
     if ctx.author.id != ctx.guild.owner_id:
         return
