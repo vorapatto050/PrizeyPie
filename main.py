@@ -34,6 +34,72 @@ for file in DATA_FILES:
         print(f"Created {file}")
 
 # ------------------------------
+# Send JSON files to #data-files
+# ------------------------------
+async def send_json_file(ctx, file_path, display_name):
+
+    if not os.path.exists(file_path):
+        return
+
+    date_str = datetime.utcnow().strftime("%d-%m-%y")
+    filename = f"{display_name}({date_str}).txt"
+
+    # find channel #data-files
+    channel = discord.utils.get(ctx.guild.text_channels, name="data-files")
+    if not channel:
+        return
+
+    await channel.send(file=discord.File(file_path, filename=filename))
+
+# ------------------------------
+# Command: !users
+# ------------------------------
+@bot.command()
+async def users(ctx):
+
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    await send_json_file(ctx, USERS_FILE, "users")
+
+# ------------------------------
+# Command: !winners
+# ------------------------------
+@bot.command()
+async def winners(ctx):
+
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    await send_json_file(ctx, WINNERS_FILE, "winners")
+
+# ------------------------------
+# Command: !countdowns
+# ------------------------------
+@bot.command()
+async def countdowns(ctx):
+
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    await send_json_file(ctx, COUNTDOWNS_FILE, "countdowns")
+    
+# ------------------------------
 # Auto add role "Not Registered" to new members
 # ------------------------------
 @bot.event
@@ -47,6 +113,35 @@ async def on_member_join(member):
             print(f"Failed to assign role: {e}")
     else:
         print("Role 'Not Registered' not found")
+
+# --------------------------------------------------------
+# Remove user data from users.json and winners.json when they leave
+# --------------------------------------------------------
+@bot.event
+async def on_member_remove(member):
+    user_id = str(member.id)
+
+    # Remove from users.json
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            data = json.load(f)
+
+        if user_id in data:
+            del data[user_id]
+            with open(USERS_FILE, "w") as f:
+                json.dump(data, f, indent=4)
+            print(f"[REMOVE] Deleted {member} from users.json")
+
+    # Remove from winners.json
+    if os.path.exists(WINNERS_FILE):
+        with open(WINNERS_FILE, "r") as f:
+            winners_data = json.load(f)
+
+        if user_id in winners_data:
+            del winners_data[user_id]
+            with open(WINNERS_FILE, "w") as f:
+                json.dump(winners_data, f, indent=4)
+            print(f"[REMOVE] Deleted {member} from winners.json")
 
 # ------------------------------
 # Command: !reg [username]
@@ -172,72 +267,6 @@ async def reg(ctx, username: str = None):
             f":green_square: {ctx.author.mention} updated their username "
             f"from `{old_name.lower()}` → `{lower_username}`"
         )
-
-# ------------------------------
-# Send JSON files to #data-files
-# ------------------------------
-async def send_json_file(ctx, file_path, display_name):
-
-    if not os.path.exists(file_path):
-        return
-
-    date_str = datetime.utcnow().strftime("%d-%m-%y")
-    filename = f"{display_name}({date_str}).txt"
-
-    # find channel #data-files
-    channel = discord.utils.get(ctx.guild.text_channels, name="data-files")
-    if not channel:
-        return
-
-    await channel.send(file=discord.File(file_path, filename=filename))
-
-# ------------------------------
-# Command: !users
-# ------------------------------
-@bot.command()
-async def users(ctx):
-
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-    await send_json_file(ctx, USERS_FILE, "users")
-
-# ------------------------------
-# Command: !winners
-# ------------------------------
-@bot.command()
-async def winners(ctx):
-
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-    await send_json_file(ctx, WINNERS_FILE, "winners")
-
-# ------------------------------
-# Command: !countdowns
-# ------------------------------
-@bot.command()
-async def countdowns(ctx):
-
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-    await send_json_file(ctx, COUNTDOWNS_FILE, "countdowns")
 
 # --------------------------------------------------------
 # Auto-register missing usernames + Auto-fix nickname
