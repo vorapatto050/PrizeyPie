@@ -2,13 +2,8 @@ import os
 import json
 import discord
 from discord.ext import commands
-from datetime import datetime, timezone
+from datetime import datetime
 from myserver import server_on
-import asyncio
-import random
-
-
-active_countdowns = {} 
 
 # ------------------------------
 # Setup bot intents
@@ -25,9 +20,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ------------------------------
 USERS_FILE = "users.json"
 WINNERS_FILE = "winners.json"
-COUNTDOWNS_FILE = "countdowns.json"
 
-DATA_FILES = [USERS_FILE, WINNERS_FILE, COUNTDOWNS_FILE]
+DATA_FILES = [USERS_FILE, WINNERS_FILE]
 
 # ------------------------------
 # Create JSON files if missing
@@ -76,16 +70,6 @@ async def winners(ctx):
     except:
         pass
     await send_json_file(ctx, WINNERS_FILE, "winners")
-
-@bot.command()
-async def countdowns(ctx):
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-    await send_json_file(ctx, COUNTDOWNS_FILE, "countdowns")
 
 # ------------------------------
 # Auto add role "Not Registered"
@@ -261,195 +245,6 @@ async def on_member_update(before, after):
             print(f"[AUTO-NICK] Fixed nickname for {after} → {username}")
         except Exception as e:
             print(f"[AUTO-NICK ERROR] Could not update nickname for {after}: {e}")
-
-# ------------------------------
-# Countdown system (random)
-# ------------------------------
-# Helper: log winners
-def log_winners(winners, title, data):
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-    if os.path.exists(WINNERS_FILE):
-        with open(WINNERS_FILE, "r") as f:
-            winners_data = json.load(f)
-    else:
-        winners_data = {}
-
-    for w in winners:
-        user_id = str(w.id)
-        if user_id not in winners_data:
-            winners_data[user_id] = []
-
-        winners_data[user_id].append({
-            "username": data[user_id],
-            "title": title,
-            "timestamp": timestamp
-        })
-
-    with open(WINNERS_FILE, "w") as f:
-        json.dump(winners_data, f, indent=4)
-
-# Generate random 6-letter key
-def generate_key():
-    return "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=6))
-
-# Countdown task
-async def countdown_task(guild, channel_id, countdown_message_id, key, title, amount, timestamp):
-    # Loop sleep ย่อย
-    while True:
-        remaining = timestamp - datetime.utcnow().timestamp()
-        if remaining <= 0:
-            break
-        elif remaining < 5:  # เหลือไม่กี่วิ → sleep สั้น ๆ
-            await asyncio.sleep(0.1)
-        else:                # เหลือหลายวิ → sleep 1 วินาที
-            await asyncio.sleep(1)
-
-    # ทำงานต่อหลัง countdown หมด
-    channel = bot.get_channel(channel_id)
-    if not channel:
-        return
-
-    # Delete countdown message
-    try:
-        msg = await channel.fetch_message(countdown_message_id)
-        await msg.delete()
-    except:
-        pass
-
-    # Get registered members
-    role = discord.utils.get(guild.roles, name="Registered")
-    if not role:
-        return
-
-    with open(USERS_FILE, "r") as f:
-        data = json.load(f)
-
-    eligible_members = [m for m in guild.members if role in m.roles and str(m.id) in data]
-    if not eligible_members:
-        return
-
-    amount = min(amount, len(eligible_members))
-    winners = random.sample(eligible_members, amount)
-
-    # Send winners message
-    winner_msg = f"**{title}**\n\nRandomly selected users🎉\n\n"
-    for w in winners:
-        winner_msg += f"{w.mention}\n"
-    await channel.send(winner_msg)
-
-    # Log winners
-    log_winners(winners, title, data)
-
-    # Delete key message in #key-saves
-    key_saves_channel = discord.utils.get(guild.text_channels, name="key-saves")
-    if key_saves_channel:
-        async for m in key_saves_channel.history(limit=200):
-            if key in m.content:
-                try:
-                    await m.delete()
-                except:
-                    pass
-
-    # Remove from active tasks
-    if key in active_countdowns:
-        del active_countdowns[key]
-
-# Command: !random
-@bot.command()
-async def random(ctx, *, args: str = None):
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-    if not args:
-        return
-
-    parts = args.split()
-    # Determine if date/time is provided
-    if len(parts) >= 4 and "/" in parts[-2] and ":" in parts[-1]:
-        # Scheduled random
-        try:
-            day, month, year = map(int, parts[-2].split("/"))
-            hour, minute = map(int, parts[-1].split(":"))
-            target_time = datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
-            amount = int(parts[-3])
-            title_raw = " ".join(parts[:-3])
-        except:
-            return
-    else:
-        # Immediate random
-        try:
-            amount = int(parts[-1])
-            title_raw = " ".join(parts[:-1])
-            target_time = datetime.utcnow()
-        except:
-            return
-
-    title = title_raw.replace("-", " ")
-    role = discord.utils.get(ctx.guild.roles, name="Registered")
-    if not role:
-        return
-
-    with open(USERS_FILE, "r") as f:
-        data = json.load(f)
-
-    eligible_members = [m for m in ctx.guild.members if role in m.roles and str(m.id) in data]
-    if not eligible_members:
-        return
-
-    amount = min(amount, len(eligible_members))
-    key = generate_key()
-
-    countdown_channel = ctx.channel
-    key_saves_channel = discord.utils.get(ctx.guild.text_channels, name="key-saves")
-    if not key_saves_channel:
-        return
-
-    # Send countdown message
-    countdown_msg = await countdown_channel.send(
-        f"@everyone\n\n**{title}**\n\nCountdown: <t:{int(target_time.timestamp())}:R>\n\n{key}\n."
-    )
-
-    # Save key info in #key-saves
-    await key_saves_channel.send(
-        f"{key}\nTitle: {title}\nAmount: {amount}\nTimestamp: {int(target_time.timestamp())}\nCountdown Msg ID: {countdown_msg.id}\n."
-    )
-
-    # Start countdown task
-    task = asyncio.create_task(
-        countdown_task(ctx.guild, countdown_channel.id, countdown_msg.id, key, title, amount, target_time.timestamp())
-    )
-    active_countdowns[key] = task
-
-# Restore countdowns on bot start
-async def restore_countdowns():
-    for guild in bot.guilds:
-        key_saves_channel = discord.utils.get(guild.text_channels, name="key-saves")
-        if not key_saves_channel:
-            continue
-        async for m in key_saves_channel.history(limit=200):
-            lines = m.content.splitlines()
-            if len(lines) < 5:
-                continue
-            key = lines[0]
-            try:
-                title_line = lines[1]
-                amount_line = lines[2]
-                timestamp_line = lines[3]
-                countdown_msg_id_line = lines[4]
-                title = title_line.split("Title: ")[1]
-                amount = int(amount_line.split("Amount: ")[1])
-                timestamp = int(timestamp_line.split("Timestamp: ")[1])
-                countdown_msg_id = int(countdown_msg_id_line.split("Countdown Msg ID: ")[1])
-            except:
-                continue
-            # Restore task
-            task = asyncio.create_task(
-                countdown_task(guild, m.channel.id, countdown_msg_id, key, title, amount, timestamp)
-            )
-            active_countdowns[key] = task
 
 # ------------------------------
 # Run bot
