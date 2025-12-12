@@ -328,7 +328,7 @@ async def countdown_task(message, title, amount, timestamp):
 # Command: !random
 # ============================================================
 @bot.command()
-async def randomize(ctx, title: str = None, amount: int = None, date: str = None, time: str = None):
+async def random(ctx, title: str = None, amount: int = None, date: str = None, time: str = None):
     try:
         await ctx.message.delete()
     except:
@@ -402,7 +402,7 @@ async def on_message(message):
 
     else:
         if content_lower.startswith("!"):
-            allowed = ["!reg", "!clear", "!randomize", "!users"]
+            allowed = ["!reg", "!clear", "!random", "!users"]
             if not any(content_lower.startswith(cmd) for cmd in allowed):
                 try:
                     await message.delete()
