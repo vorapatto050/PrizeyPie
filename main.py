@@ -211,36 +211,47 @@ async def on_ready():
             continue
 
         async for msg in countdown_channel.history(limit=100):
+            # 1. parse ข้อมูล save
             try:
-                msg_id, title, amount, timestamp = msg.content.split("|")
+                msg_id, countdown_channel_id, title, amount, timestamp = msg.content.split("|")
                 msg_id = int(msg_id)
+                countdown_channel_id = int(countdown_channel_id)
                 amount = int(amount)
                 timestamp = int(timestamp)
-            except:
+            except Exception as e:
+                print(f"[RECOVER ERROR] Invalid save format: {msg.content} | {e}")
                 continue
 
-            # Fetch the countdown message
+            # 2. เช็ก expired
+            if timestamp <= int(datetime.utcnow().timestamp()):
+                try:
+                    await msg.delete()
+                    print(f"[RECOVER] Countdown {title} expired, deleted save message")
+                except:
+                    pass
+                continue
+
+            # 3. fetch message จาก channel จริง
             try:
-                channel = msg.guild.get_channel(msg.channel.id)
-                countdown_msg = await channel.fetch_message(msg_id)
+                real_channel = msg.guild.get_channel(countdown_channel_id)
+                if real_channel is None:
+                    print(f"[RECOVER ERROR] Channel {countdown_channel_id} not found")
+                    continue
+                countdown_msg = await real_channel.fetch_message(msg_id)
             except Exception as e:
                 print(f"[RECOVER ERROR] Could not fetch countdown message {msg_id}: {e}")
                 continue
 
-            # Resume countdown if not expired
-            if timestamp > int(datetime.utcnow().timestamp()):
-                ACTIVE_COUNTDOWNS[msg_id] = {
-                    "title": title,
-                    "amount": amount,
-                    "timestamp": timestamp,
-                    "message": countdown_msg
-                }
-                bot.loop.create_task(countdown_task(countdown_msg, title, amount, timestamp))
-            else:
-                try:
-                    await msg.delete()
-                except:
-                    pass
+            # 4. สร้าง task
+            ACTIVE_COUNTDOWNS[msg_id] = {
+                "title": title,
+                "amount": amount,
+                "timestamp": timestamp,
+                "message": countdown_msg
+            }
+            print(f"[RECOVER] Resumed countdown {title} ({msg_id})")
+            bot.loop.create_task(countdown_task(countdown_msg, title, amount, timestamp))
+
 
 # --------------------------------------------------------
 # Auto-fix nickname
@@ -352,8 +363,9 @@ async def randomize(ctx, title: str = None, amount: int = None, date: str = None
         )
 
         # Save to #countdown-saves
-        save_msg = await countdown_channel.send(
-            f"{countdown_msg.id}|{title_display}|{amount}|{timestamp}"
+
+        await countdown_channel.send(
+            f"{countdown_msg.id}|{countdown_msg.channel.id}|{title_display}|{amount}|{timestamp}"
         )
 
         # Store in memory
