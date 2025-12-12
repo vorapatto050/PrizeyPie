@@ -270,9 +270,11 @@ async def on_member_update(before, after):
 # Helper: convert DD/MM/YY HH:MM to timestamp UTC
 # --------------------------
 def parse_datetime_to_timestamp(date_str, time_str):
-    dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%y %H:%M")
+    # เปลี่ยน %y → %Y
+    dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%Y %H:%M")
     dt = dt.replace(tzinfo=timezone.utc)
     return int(dt.timestamp())
+
 
 # --------------------------
 # Countdown task (เฉพาะผู้ลงทะเบียน)
@@ -357,3 +359,4 @@ async def randomize(ctx, title: str, amount: int, date: str, time: str):
 # ------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
+
