@@ -329,6 +329,9 @@ async def countdown_task(message, title, amount, timestamp):
 # ============================================================
 @bot.command()
 async def random(ctx, title: str = None, amount: int = None, date: str = None, time: str = None):
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
     try:
         await ctx.message.delete()
     except:
