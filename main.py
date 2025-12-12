@@ -397,6 +397,57 @@ async def clear(ctx):
     except:
         pass  # เงียบ ๆ ถ้ามี error
 
+# --------------------------
+# Auto delete
+# --------------------------
+@bot.event
+async def on_message(message):
+    # อย่าลบข้อความ bot เอง
+    if message.author.bot:
+        return
+
+    content_lower = message.content.lower()
+
+    # -------------------------
+    # กรณี 1: สมาชิกทั่วไป
+    # ลบข้อความทั้งหมด นอกจาก !reg
+    # -------------------------
+    if message.author.id != message.guild.owner_id:
+        if not content_lower.startswith("!reg"):
+            try:
+                await message.delete()
+            except:
+                pass
+
+    # -------------------------
+    # กรณี 2: Owner
+    # ลบข้อความที่ขึ้นต้นด้วย ! ยกเว้น !reg !clear !randomize !users
+    # -------------------------
+    else:  # owner
+        if content_lower.startswith("!"):
+            allowed = ["!reg", "!clear", "!randomize", "!users"]
+            if not any(content_lower.startswith(cmd) for cmd in allowed):
+                try:
+                    await message.delete()
+                except:
+                    pass
+
+    # ต้องเพิ่มบรรทัดนี้เสมอ เพื่อให้ command ทำงาน
+    await bot.process_commands(message)
+
+# -------------------------
+# จับ error ของ command
+# -------------------------
+@bot.event
+async def on_command_error(ctx, error):
+    # ลบข้อความคำสั่งของผู้ใช้ถ้าเกิด error
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+    # สามารถ print log หรือ ignore ข้อความ error ได้
+    print(f"[COMMAND ERROR] {ctx.author} | {ctx.command} | {error}")
+
 # ------------------------------
 # Run bot
 # ------------------------------
