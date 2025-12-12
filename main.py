@@ -114,7 +114,7 @@ async def reg(ctx, username: str = None):
 
     # NEW user, name taken
     if old_name is None and lower_username in existing_usernames_lower:
-        await ctx.send(f":yellow_square: The username {lower_username} that {ctx.author.mention} tried to use is already taken!")
+        await ctx.send(f":yellow_square: The username `{lower_username}` that {ctx.author.mention} tried to use is already taken!")
         return
 
     # NEW user, name free
@@ -144,7 +144,7 @@ async def reg(ctx, username: str = None):
 
     # EXISTING user, name taken by someone else
     if lower_username in existing_usernames_lower and lower_username != old_name.lower():
-        await ctx.send(f":yellow_square: The username {lower_username} that {ctx.author.mention} tried to use is already taken!")
+        await ctx.send(f":yellow_square: The username `{lower_username}` that {ctx.author.mention} tried to use is already taken!")
         return
 
     # EXISTING user, name free -> update
@@ -184,7 +184,7 @@ async def on_ready():
     else:
         users_data = {}
 
-    # ---------- Auto register ----------    
+    # ---------- Auto register ----------
     for guild in bot.guilds:
         reg_role = discord.utils.get(guild.roles, name="Registered")
         if not reg_role:
