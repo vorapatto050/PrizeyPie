@@ -382,6 +382,21 @@ async def randomize(ctx, title: str = None, amount: int = None, date: str = None
     except:
         return  # ทุก error เงียบ ๆ
 
+# --------------------------
+# Command: !clear
+# --------------------------
+@bot.command()
+async def clear(ctx):
+    # เช็กว่าเป็น owner ของ guild
+    if ctx.author.id != ctx.guild.owner_id:
+        return  # เงียบ ๆ ไม่อนุญาต
+
+    # ลบข้อความทั้งหมดใน channel ปัจจุบัน
+    try:
+        await ctx.channel.purge(limit=None)
+    except:
+        pass  # เงียบ ๆ ถ้ามี error
+
 # ------------------------------
 # Run bot
 # ------------------------------
