@@ -1,8 +1,10 @@
 import os
 import json
 import discord
+import asyncio
+import random
 from discord.ext import commands
-from datetime import datetime
+from datetime import datetime, timezone
 from myserver import server_on
 
 # ------------------------------
@@ -19,18 +21,17 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # File paths
 # ------------------------------
 USERS_FILE = "users.json"
-WINNERS_FILE = "winners.json"
 
-DATA_FILES = [USERS_FILE, WINNERS_FILE]
+COUNTDOWN_CHANNEL_NAME = "countdown-saves"
+ACTIVE_COUNTDOWNS = {}
 
 # ------------------------------
-# Create JSON files if missing
+# Create JSON file if missing
 # ------------------------------
-for file in DATA_FILES:
-    if not os.path.exists(file):
-        with open(file, "w") as f:
-            json.dump({}, f, indent=4)
-        print(f"Created {file}")
+if not os.path.exists(USERS_FILE):
+    with open(USERS_FILE, "w") as f:
+        json.dump({}, f, indent=4)
+    print(f"Created {USERS_FILE}")
 
 # ------------------------------
 # Send JSON files to #data-files
@@ -49,7 +50,7 @@ async def send_json_file(ctx, file_path, display_name):
     await channel.send(file=discord.File(file_path, filename=filename))
 
 # ------------------------------
-# Commands to send JSON files
+# Command to send users.json
 # ------------------------------
 @bot.command()
 async def users(ctx):
@@ -60,16 +61,6 @@ async def users(ctx):
     except:
         pass
     await send_json_file(ctx, USERS_FILE, "users")
-
-@bot.command()
-async def winners(ctx):
-    if ctx.author.id != ctx.guild.owner_id:
-        return
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-    await send_json_file(ctx, WINNERS_FILE, "winners")
 
 # ------------------------------
 # Auto add role "Not Registered"
@@ -103,17 +94,6 @@ async def on_member_remove(member):
             with open(USERS_FILE, "w") as f:
                 json.dump(data, f, indent=4)
             print(f"[REMOVE] Deleted {member} from users.json")
-
-    # Remove from winners.json
-    if os.path.exists(WINNERS_FILE):
-        with open(WINNERS_FILE, "r") as f:
-            winners_data = json.load(f)
-
-        if user_id in winners_data:
-            del winners_data[user_id]
-            with open(WINNERS_FILE, "w") as f:
-                json.dump(winners_data, f, indent=4)
-            print(f"[REMOVE] Deleted {member} from winners.json")
 
 # ------------------------------
 # Command: !reg [username]
@@ -188,13 +168,13 @@ async def reg(ctx, username: str = None):
             pass
         await ctx.send(f":green_square: {ctx.author.mention} updated username `{old_name.lower()}` → `{lower_username}`")
 
-# --------------------------------------------------------
-# Bot Ready + Auto-register missing usernames
-# --------------------------------------------------------
 @bot.event
 async def on_ready():
     print(f"Bot is ready: {bot.user}")
 
+    # ------------------------
+    # Auto-register missing usernames
+    # ------------------------
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
             users_data = json.load(f)
@@ -222,6 +202,46 @@ async def on_ready():
     with open(USERS_FILE, "w") as f:
         json.dump(dict(sorted(users_data.items(), key=lambda x: x[1])), f, indent=4)
 
+    # ------------------------
+    # Recover countdowns
+    # ------------------------
+    for guild in bot.guilds:
+        countdown_channel = discord.utils.get(guild.text_channels, name=COUNTDOWN_CHANNEL_NAME)
+        if not countdown_channel:
+            continue
+
+        async for msg in countdown_channel.history(limit=100):
+            try:
+                msg_id, title, amount, timestamp = msg.content.split("|")
+                msg_id = int(msg_id)
+                amount = int(amount)
+                timestamp = int(timestamp)
+            except:
+                continue
+
+            # Fetch the countdown message
+            try:
+                channel = msg.guild.get_channel(msg.channel.id)
+                countdown_msg = await channel.fetch_message(msg_id)
+            except Exception as e:
+                print(f"[RECOVER ERROR] Could not fetch countdown message {msg_id}: {e}")
+                continue
+
+            # Resume countdown if not expired
+            if timestamp > int(datetime.utcnow().timestamp()):
+                ACTIVE_COUNTDOWNS[msg_id] = {
+                    "title": title,
+                    "amount": amount,
+                    "timestamp": timestamp,
+                    "message": countdown_msg
+                }
+                bot.loop.create_task(countdown_task(countdown_msg, title, amount, timestamp))
+            else:
+                try:
+                    await msg.delete()
+                except:
+                    pass
+
 # --------------------------------------------------------
 # Auto-fix nickname
 # --------------------------------------------------------
@@ -245,6 +265,92 @@ async def on_member_update(before, after):
             print(f"[AUTO-NICK] Fixed nickname for {after} → {username}")
         except Exception as e:
             print(f"[AUTO-NICK ERROR] Could not update nickname for {after}: {e}")
+
+# --------------------------
+# Helper: convert DD/MM/YY HH:MM to timestamp UTC
+# --------------------------
+def parse_datetime_to_timestamp(date_str, time_str):
+    dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%y %H:%M")
+    dt = dt.replace(tzinfo=timezone.utc)
+    return int(dt.timestamp())
+
+# --------------------------
+# Countdown task (เฉพาะผู้ลงทะเบียน)
+# --------------------------
+async def countdown_task(message, title, amount, timestamp):
+    while True:
+        now = int(datetime.utcnow().timestamp())
+        remaining = timestamp - now
+        if remaining <= 0:
+            try:
+                await message.delete()
+            except:
+                pass
+
+            # โหลดข้อมูล users.json
+            if os.path.exists(USERS_FILE):
+                with open(USERS_FILE, "r") as f:
+                    users_data = json.load(f)
+            else:
+                users_data = {}
+
+            # เลือกเฉพาะสมาชิกที่ยังอยู่ในกิลด์และลงทะเบียน
+            guild = message.guild
+            registered_members = []
+            for user_id_str, username in users_data.items():
+                member = guild.get_member(int(user_id_str))
+                if member and not member.bot:
+                    registered_members.append(member)
+
+            if not registered_members:
+                await message.channel.send(f"**{title}**\n\nไม่มีผู้ลงทะเบียนให้สุ่ม 🎉")
+                ACTIVE_COUNTDOWNS.pop(message.id, None)
+                break
+
+            winners = random.sample(registered_members, min(amount, len(registered_members)))
+
+            winner_mentions = "\n".join([u.mention for u in winners])
+            await message.channel.send(
+                f"**{title}**\n\nRandomly selected registered users 🎉\n\n{winner_mentions}"
+            )
+
+            ACTIVE_COUNTDOWNS.pop(message.id, None)
+            break
+
+        # Dynamic sleep
+        await asyncio.sleep(1 if remaining <= 5 else 5)
+
+# --------------------------
+# Command: !random
+# --------------------------
+@bot.command()
+async def randomize(ctx, title: str, amount: int, date: str, time: str):
+    title_display = title.replace("-", " ")
+    timestamp = parse_datetime_to_timestamp(date, time)
+
+    countdown_channel = discord.utils.get(ctx.guild.text_channels, name=COUNTDOWN_CHANNEL_NAME)
+    if not countdown_channel:
+        return await ctx.send(f"Channel {COUNTDOWN_CHANNEL_NAME} not found.")
+
+    countdown_msg = await ctx.send(
+        f"@everyone\n\n**{title_display}**\n\nCountdown: <t:{timestamp}:R>"
+    )
+
+    # Save to #countdown-saves
+    save_msg = await countdown_channel.send(
+        f"{countdown_msg.id}|{title_display}|{amount}|{timestamp}"
+    )
+
+    # Store in memory
+    ACTIVE_COUNTDOWNS[countdown_msg.id] = {
+        "title": title_display,
+        "amount": amount,
+        "timestamp": timestamp,
+        "message": countdown_msg
+    }
+
+    # Start countdown
+    bot.loop.create_task(countdown_task(countdown_msg, title_display, amount, timestamp))
 
 # ------------------------------
 # Run bot
