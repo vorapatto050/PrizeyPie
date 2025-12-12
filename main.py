@@ -270,11 +270,9 @@ async def on_member_update(before, after):
 # Helper: convert DD/MM/YY HH:MM to timestamp UTC
 # --------------------------
 def parse_datetime_to_timestamp(date_str, time_str):
-    # เปลี่ยน %y → %Y
     dt = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%Y %H:%M")
     dt = dt.replace(tzinfo=timezone.utc)
     return int(dt.timestamp())
-
 
 # --------------------------
 # Countdown task (เฉพาะผู้ลงทะเบียน)
@@ -326,37 +324,54 @@ async def countdown_task(message, title, amount, timestamp):
 # Command: !random
 # --------------------------
 @bot.command()
-async def randomize(ctx, title: str, amount: int, date: str, time: str):
+async def randomize(ctx, title: str = None, amount: int = None, date: str = None, time: str = None):
+    # ลบข้อความผู้ใช้ทันที
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    # ตรวจสอบ argument, ถ้าไม่ครบหรือผิด ก็ return เงียบ ๆ
+    if not all([title, amount, date, time]):
+        return
+
+    try:
+        timestamp = parse_datetime_to_timestamp(date, time)
+    except:
+        return  # เงียบ ๆ ไม่ส่ง error
+
     title_display = title.replace("-", " ")
-    timestamp = parse_datetime_to_timestamp(date, time)
 
-    countdown_channel = discord.utils.get(ctx.guild.text_channels, name=COUNTDOWN_CHANNEL_NAME)
-    if not countdown_channel:
-        return await ctx.send(f"Channel {COUNTDOWN_CHANNEL_NAME} not found.")
+    try:
+        countdown_channel = discord.utils.get(ctx.guild.text_channels, name=COUNTDOWN_CHANNEL_NAME)
+        if not countdown_channel:
+            return
 
-    countdown_msg = await ctx.send(
-        f"@everyone\n\n**{title_display}**\n\nCountdown: <t:{timestamp}:R>"
-    )
+        countdown_msg = await ctx.send(
+            f"@everyone\n\n**{title_display}**\n\nCountdown: <t:{timestamp}:R>"
+        )
 
-    # Save to #countdown-saves
-    save_msg = await countdown_channel.send(
-        f"{countdown_msg.id}|{title_display}|{amount}|{timestamp}"
-    )
+        # Save to #countdown-saves
+        save_msg = await countdown_channel.send(
+            f"{countdown_msg.id}|{title_display}|{amount}|{timestamp}"
+        )
 
-    # Store in memory
-    ACTIVE_COUNTDOWNS[countdown_msg.id] = {
-        "title": title_display,
-        "amount": amount,
-        "timestamp": timestamp,
-        "message": countdown_msg
-    }
+        # Store in memory
+        ACTIVE_COUNTDOWNS[countdown_msg.id] = {
+            "title": title_display,
+            "amount": amount,
+            "timestamp": timestamp,
+            "message": countdown_msg
+        }
 
-    # Start countdown
-    bot.loop.create_task(countdown_task(countdown_msg, title_display, amount, timestamp))
+        # Start countdown
+        bot.loop.create_task(countdown_task(countdown_msg, title_display, amount, timestamp))
+
+    except:
+        return  # ทุก error เงียบ ๆ
 
 # ------------------------------
 # Run bot
 # ------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
-
