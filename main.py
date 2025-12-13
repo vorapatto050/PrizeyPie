@@ -308,7 +308,6 @@ async def countdown_task(message, title, amount, timestamp):
             ]
 
             if not registered_members:
-                await message.channel.send(f"**{title}**\n\nไม่มีผู้ลงทะเบียนให้สุ่ม 🎉")
                 ACTIVE_COUNTDOWNS.pop(message.id, None)
                 break
 
@@ -316,7 +315,7 @@ async def countdown_task(message, title, amount, timestamp):
             winner_mentions = "\n".join([w.mention for w in winners])
 
             await message.channel.send(
-                f"**{title}**\n\nRandomly selected registered users 🎉\n\n{winner_mentions}"
+                f"**{title}**\n\nRandomly selected registered users 🎉\n\n{winner_mentions}\n\n."
             )
 
             ACTIVE_COUNTDOWNS.pop(message.id, None)
@@ -353,7 +352,7 @@ async def random_cmd(ctx, title: str = None, amount: int = None, date: str = Non
             return
 
         countdown_msg = await ctx.send(
-            f"@everyone\n\n**{title_display}**\n\nCountdown: <t:{timestamp}:R>"
+            f"@everyone\n\n**{title_display}**\n\nCountdown: <t:{timestamp}:R>\n\n."
         )
 
         await countdown_channel.send(
