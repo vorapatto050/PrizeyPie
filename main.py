@@ -49,10 +49,10 @@ async def send_json_file(ctx, file_path, display_name):
     await channel.send(file=discord.File(file_path, filename=filename))
 
 # ============================================================
-# Command: !users
+# Command: !users (owner only)
 # ============================================================
-@bot.command()
-async def users(ctx):
+@bot.command(name="users")
+async def users_cmd(ctx):
     if ctx.author.id != ctx.guild.owner_id:
         return
     try:
@@ -95,8 +95,8 @@ async def on_member_remove(member):
 # ============================================================
 # Command: !reg
 # ============================================================
-@bot.command()
-async def reg(ctx, username: str = None):
+@bot.command(name="reg")
+async def reg_cmd(ctx, username: str = None):
     try:
         await ctx.message.delete()
     except:
@@ -325,10 +325,10 @@ async def countdown_task(message, title, amount, timestamp):
         await asyncio.sleep(1 if remaining <= 5 else 5)
 
 # ============================================================
-# Command: !random
+# Command: !random (owner only)
 # ============================================================
-@bot.command()
-async def random(ctx, title: str = None, amount: int = None, date: str = None, time: str = None):
+@bot.command(name="random")
+async def random_cmd(ctx, title: str = None, amount: int = None, date: str = None, time: str = None):
     if ctx.author.id != ctx.guild.owner_id:
         return
 
@@ -376,8 +376,8 @@ async def random(ctx, title: str = None, amount: int = None, date: str = None, t
 # ============================================================
 # Command: !clear (owner only)
 # ============================================================
-@bot.command()
-async def clear(ctx):
+@bot.command(name="clear")
+async def clear_cmd(ctx):
     if ctx.author.id != ctx.guild.owner_id:
         return
 
