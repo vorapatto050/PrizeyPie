@@ -373,6 +373,74 @@ async def random_cmd(ctx, title: str = None, amount: int = None, date: str = Non
         return
 
 # ============================================================
+# Command: !replace (owner only)
+# ============================================================
+@bot.command(name="replace")
+async def replace_cmd(ctx, message_id: int = None, old: discord.Member = None, target=None):
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    if not all([message_id, old, target]):
+        return
+
+    try:
+        msg = await ctx.channel.fetch_message(message_id)
+    except:
+        return
+
+    if msg.author.id != bot.user.id:
+        return
+
+    content = msg.content
+
+    if old.mention not in content:
+        return
+
+    # -------------------------------
+    # MODE: random
+    # -------------------------------
+    if isinstance(target, str) and target.lower() == "random":
+        if not os.path.exists(USERS_FILE):
+            return
+
+        with open(USERS_FILE, "r") as f:
+            users_data = json.load(f)
+
+        guild = ctx.guild
+        candidates = [
+            guild.get_member(int(uid))
+            for uid in users_data.keys()
+            if guild.get_member(int(uid))
+            and not guild.get_member(int(uid)).bot
+            and guild.get_member(int(uid)) != old
+        ]
+
+        if not candidates:
+            return
+
+        new = random.choice(candidates)
+
+    # -------------------------------
+    # MODE: manual
+    # -------------------------------
+    else:
+        if not isinstance(target, discord.Member):
+            return
+        new = target
+
+    new_content = content.replace(old.mention, new.mention)
+
+    try:
+        await msg.edit(content=new_content)
+    except:
+        pass
+
+# ============================================================
 # Command: !clear (owner only)
 # ============================================================
 @bot.command(name="clear")
@@ -404,7 +472,7 @@ async def on_message(message):
 
     else:
         if content_lower.startswith("!"):
-            allowed = ["!reg", "!clear", "!random", "!users"]
+            allowed = ["!reg", "!clear", "!random", "!users", "!replace"]
             if not any(content_lower.startswith(cmd) for cmd in allowed):
                 try:
                     await message.delete()
@@ -443,3 +511,4 @@ async def on_message_delete(message):
 # ============================================================
 server_on()
 bot.run(os.getenv('TOKEN'))
+
