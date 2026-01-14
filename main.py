@@ -376,7 +376,7 @@ async def random_cmd(ctx, title: str = None, amount: int = None, date: str = Non
 # Command: !replace (owner only)
 # ============================================================
 @bot.command(name="replace")
-async def replace_cmd(ctx, message_id: int, old: discord.Member, target):
+async def replace_cmd(ctx, message_id: int, old: str, target: str):
     if ctx.author.id != ctx.guild.owner_id:
         return
 
@@ -393,37 +393,50 @@ async def replace_cmd(ctx, message_id: int, old: discord.Member, target):
     if msg.author.id != bot.user.id:
         return
 
-    content = msg.content
+    def find_member(value):
+        value = value.strip("<@!>").lower()
+        for m in ctx.guild.members:
+            if (
+                m.name.lower() == value
+                or (m.nick and m.nick.lower() == value)
+                or str(m.id) == value
+            ):
+                return m
+        return None
 
-    if old.mention not in content:
+    old_member = find_member(old)
+    if not old_member:
         return
 
-    if isinstance(target, str) and target.lower() == "random":
+    content = msg.content
+    if old_member.mention not in content:
+        return
+
+    if target.lower() == "random":
         if not os.path.exists(USERS_FILE):
             return
 
         with open(USERS_FILE, "r") as f:
             users_data = json.load(f)
 
-        guild = ctx.guild
         candidates = [
-            guild.get_member(int(uid))
+            ctx.guild.get_member(int(uid))
             for uid in users_data.keys()
-            if guild.get_member(int(uid))
-            and not guild.get_member(int(uid)).bot
-            and guild.get_member(int(uid)) != old
+            if ctx.guild.get_member(int(uid))
+            and not ctx.guild.get_member(int(uid)).bot
+            and ctx.guild.get_member(int(uid)) != old_member
         ]
 
         if not candidates:
             return
 
-        new = random.choice(candidates)
+        new_member = random.choice(candidates)
     else:
-        if not isinstance(target, discord.Member):
+        new_member = find_member(target)
+        if not new_member:
             return
-        new = target
 
-    new_content = content.replace(old.mention, new.mention)
+    new_content = content.replace(old_member.mention, new_member.mention)
 
     try:
         await msg.edit(content=new_content)
@@ -501,5 +514,6 @@ async def on_message_delete(message):
 # ============================================================
 server_on()
 bot.run(os.getenv('TOKEN'))
+
 
 
