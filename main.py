@@ -376,7 +376,7 @@ async def random_cmd(ctx, title: str = None, amount: int = None, date: str = Non
 # Command: !replace (owner only)
 # ============================================================
 @bot.command(name="replace")
-async def replace_cmd(ctx, message_id: int = None, old: discord.Member = None, target=None):
+async def replace_cmd(ctx, message_id: int, old: discord.Member, target):
     if ctx.author.id != ctx.guild.owner_id:
         return
 
@@ -384,9 +384,6 @@ async def replace_cmd(ctx, message_id: int = None, old: discord.Member = None, t
         await ctx.message.delete()
     except:
         pass
-
-    if not all([message_id, old, target]):
-        return
 
     try:
         msg = await ctx.channel.fetch_message(message_id)
@@ -401,9 +398,6 @@ async def replace_cmd(ctx, message_id: int = None, old: discord.Member = None, t
     if old.mention not in content:
         return
 
-    # -------------------------------
-    # MODE: random
-    # -------------------------------
     if isinstance(target, str) and target.lower() == "random":
         if not os.path.exists(USERS_FILE):
             return
@@ -424,10 +418,6 @@ async def replace_cmd(ctx, message_id: int = None, old: discord.Member = None, t
             return
 
         new = random.choice(candidates)
-
-    # -------------------------------
-    # MODE: manual
-    # -------------------------------
     else:
         if not isinstance(target, discord.Member):
             return
@@ -511,4 +501,5 @@ async def on_message_delete(message):
 # ============================================================
 server_on()
 bot.run(os.getenv('TOKEN'))
+
 
