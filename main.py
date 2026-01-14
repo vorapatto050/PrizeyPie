@@ -419,12 +419,14 @@ async def replace_cmd(ctx, message_id: int, old: str, target: str):
         with open(USERS_FILE, "r") as f:
             users_data = json.load(f)
 
+        mentioned_members = set(msg.mentions)
+
         candidates = [
             ctx.guild.get_member(int(uid))
             for uid in users_data.keys()
             if ctx.guild.get_member(int(uid))
             and not ctx.guild.get_member(int(uid)).bot
-            and ctx.guild.get_member(int(uid)) != old_member
+            and ctx.guild.get_member(int(uid)) not in mentioned_members
         ]
 
         if not candidates:
@@ -514,6 +516,7 @@ async def on_message_delete(message):
 # ============================================================
 server_on()
 bot.run(os.getenv('TOKEN'))
+
 
 
 
